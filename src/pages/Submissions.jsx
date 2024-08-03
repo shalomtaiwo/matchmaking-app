@@ -1,4 +1,3 @@
-
 import { Table, Container, Title, LoadingOverlay, Button, Flex, Text, Center } from '@mantine/core';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
@@ -6,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Empty, Image, Pagination } from 'antd';
 import { notifications } from '@mantine/notifications';
 import { useState } from 'react';
+import PropTypes from 'prop-types'
 
 const Submissions = ({ guests, loading, error }) => {
     const navigate = useNavigate();
@@ -101,5 +101,11 @@ const Submissions = ({ guests, loading, error }) => {
         </Container>
     );
 };
+
+Submissions.propTypes = {
+    guests: PropTypes.array,
+    loading: PropTypes.bool,
+    error: PropTypes.any
+}
 
 export default Submissions;

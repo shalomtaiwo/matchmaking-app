@@ -1,8 +1,9 @@
-import { Card, Text, Button, Group, Center } from '@mantine/core';
+import { Card, Text, Button, Group, Center, Progress } from '@mantine/core';
 import { Image } from 'antd';
 import { Link } from 'react-router-dom';
+import PropTypes from 'prop-types'
 
-const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate }) => {
+const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate, matchPercentage }) => {
     return (
 
         <Card shadow="sm" padding="lg" radius="md" mt={10} withBorder style={{ textAlign: 'center' }}>
@@ -37,8 +38,16 @@ const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate }) => 
                     </Button>
                 </Group>
             </Center>
+            <Progress value={matchPercentage} mt="md" color={matchPercentage > 50 ? 'green' : matchPercentage > 25 ? 'yellow' :  'red'} />
         </Card>
     );
 };
+
+RecommendedGuestCard.propTypes = {
+    guest: PropTypes.object,
+    setBlindDate: PropTypes.func,
+    isAlreadyInBlindDate: PropTypes.bool,
+    matchPercentage: PropTypes.number
+}
 
 export default RecommendedGuestCard;
