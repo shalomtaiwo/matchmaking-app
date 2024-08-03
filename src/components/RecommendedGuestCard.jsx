@@ -1,7 +1,6 @@
-import { Card, Text, Button, Group, ActionIcon, Center } from '@mantine/core';
+import { Card, Text, Button, Group, Center } from '@mantine/core';
 import { Image } from 'antd';
 import { Link } from 'react-router-dom';
-import { IconTrash } from '@tabler/icons-react';
 
 const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate }) => {
     return (
@@ -36,10 +35,6 @@ const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate }) => 
                     >
                         {isAlreadyInBlindDate ? 'Already in Blind Date List' : 'Set Blind Date'}
                     </Button>
-
-                    <ActionIcon color="red" ml="sm">
-                        <IconTrash size={16} />
-                    </ActionIcon>
                 </Group>
             </Center>
         </Card>

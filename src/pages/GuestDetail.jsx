@@ -1,13 +1,15 @@
-import { Container, Title, Text, AppShell, ScrollArea, NavLink, Tabs, Button, Divider, ActionIcon, Grid, Collapse, Tooltip, Flex, Table, Paper, Center } from '@mantine/core';
+import { Container, Title, Text, AppShell, ScrollArea, NavLink, Tabs, Button, Divider, ActionIcon, Grid, Collapse, Tooltip, Flex, Center } from '@mantine/core';
 import { useParams, Link } from 'react-router-dom';
-import { doc, collection, addDoc, query, where, updateDoc, setDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, query, where, updateDoc } from 'firebase/firestore';
 import { useDocument, useCollection } from 'react-firebase-hooks/firestore';
 import { db } from '../firebaseConfig';
 import { LoadingOverlay } from '@mantine/core';
-import { IconX, IconCheck, IconTrash, IconRestore } from '@tabler/icons-react';
+import { IconX, IconCheck, IconRestore } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { Empty, Image } from 'antd';
 import RecommendedGuestCard from '../components/RecommendedGuestCard';
+import PropTypes from 'prop-types'
+
 
 const GuestDetail = () => {
     const { id } = useParams();
@@ -60,8 +62,8 @@ const GuestDetail = () => {
     };
 
     const recommendedGuests = guests.filter(g =>
-        g.gender === guest.interestedIn &&
-        g.gender !== guest.gender &&
+        g.gender === guest?.interestedIn &&
+        g.gender !== guest?.gender &&
         (
             (guest.preferredLocation ? g.location === guest.preferredLocation : true) ||
             (
@@ -74,6 +76,10 @@ const GuestDetail = () => {
         (guest.dontMindKids || g.haveKids === guest.haveKids) &&
         g.id !== id
     );
+
+    if (!guest) return <Center mt={70}>
+        <Empty description="No guest found" />
+    </Center>
 
 
     return (
@@ -294,5 +300,9 @@ const GuestDetail = () => {
         </>
     );
 };
+
+GuestDetail.propTypes = {
+    addGuest: PropTypes.func
+}
 
 export default GuestDetail;

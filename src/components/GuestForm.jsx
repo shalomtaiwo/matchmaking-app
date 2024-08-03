@@ -1,10 +1,11 @@
 
 import { useForm } from '@mantine/form';
-import { TextInput, Textarea, Button, Container, Title, Select, NumberInput, Checkbox, Grid, Divider, SimpleGrid, Paper, Image } from '@mantine/core';
+import { TextInput, Textarea, Button, Container, Title, Select, NumberInput, Checkbox, Divider, SimpleGrid, Paper, Image } from '@mantine/core';
 import { useState } from 'react';
 import { UploadImage } from '../uploads/UploadImage';
 import ImageUpload from '../assets/upload.svg';
 import { notifications } from '@mantine/notifications';
+import PropTypes from 'prop-types'
 
 const getRandomUserDetails = () => {
     const randomNames = ['John Doe', 'Jane Smith', 'Alice Johnson', 'Bob Brown', 'Charlie Davis'];
@@ -97,6 +98,7 @@ const GuestForm = ({ addGuest }) => {
         }, 3000);
     };
 
+    /* eslint-disable-next-line no-unused-vars */
     const fillDemoData = () => {
         const demoData = getRandomUserDetails();
         form.setValues(demoData);
@@ -248,5 +250,9 @@ const GuestForm = ({ addGuest }) => {
         </Container>
     );
 };
+
+GuestForm.propTypes = {
+    addGuest: PropTypes.func
+}
 
 export default GuestForm;
