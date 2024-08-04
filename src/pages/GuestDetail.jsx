@@ -9,6 +9,8 @@ import { useDisclosure } from '@mantine/hooks';
 import { Empty, Image } from 'antd';
 import RecommendedGuestCard from '../components/RecommendedGuestCard';
 import PropTypes from 'prop-types'
+// import { ImageBox } from 'mantine-addons';
+
 
 
 const GuestDetail = () => {
@@ -78,17 +80,37 @@ const GuestDetail = () => {
     );
 
     // calculate match percentage to see how many out of the user's preference the recommnded user ticks
-    const getmatchPercentage = {
-        gender: guest?.gender === recommendedGuests[0]?.gender ? 20 : 0,
-        location: guest?.preferredLocation === recommendedGuests[0]?.location ? 10 : 0,
-        religion: guest?.preferredReligion === recommendedGuests[0]?.religion ? 10 : 0,
-        zodiacSign: guest?.preferredZodiacSign === recommendedGuests[0]?.zodiacSign ? 10 : 0,
-        personality: guest?.preferredPersonality === recommendedGuests[0]?.personality ? 20 : 0,
-        description: guest?.preference.split(' ').some(pref => recommendedGuests[0]?.description?.toLowerCase().includes(pref.toLowerCase())) ? 20 : 0,
-        kids: guest?.dontMindKids ? 0 : recommendedGuests[0]?.haveKids === guest?.haveKids ? 10 : 0,
-    }
+    const getMatchPercentage = (user) => {
+        let matchScore = 0;
+        let totalWeight = 0;
 
-    const matchPercentage = Object.values(getmatchPercentage).reduce((a, b) => a + b, 0)
+        // Define weights for each preference
+        const weights = {
+            gender: 20,
+            location: 10,
+            religion: 10,
+            zodiacSign: 10,
+            personality: 20,
+            description: 20,
+            kids: 10,
+        };
+
+        // Calculate match score
+        if (guest.gender === user.gender) matchScore += weights.gender;
+        if (guest.preferredLocation === user.location) matchScore += weights.location;
+        if (guest.preferredReligion === user.religion) matchScore += weights.religion;
+        if (guest.preferredZodiacSign === user.zodiacSign) matchScore += weights.zodiacSign;
+        if (guest.preferredPersonality === user.personality) matchScore += weights.personality;
+        if (guest.preference.split(' ').some(pref => user.description?.toLowerCase().includes(pref.toLowerCase()))) matchScore += weights.description;
+        if (!guest.dontMindKids && user.haveKids === guest.haveKids) matchScore += weights.kids;
+
+        // Calculate total weight
+        totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+
+        // Calculate and return match percentage
+        return (matchScore / totalWeight) * 100;
+    };
+
 
 
     if (!guest) return <Center mt={70}>
@@ -126,6 +148,9 @@ const GuestDetail = () => {
 
                         <Tabs.Panel value="details">
                             <Flex align={'center'} justify={'center'} direction={'column'} mt={20}>
+
+                                {/* <ImageBox src={guest.image} alt="Placeholder image" /> */}
+
                                 <Image
                                     width={100}
                                     height={100}
@@ -138,23 +163,23 @@ const GuestDetail = () => {
                             <Button onClick={toggleOpened}>User Details</Button>
 
                             <Collapse in={opened} p={'lg'}>
-                                    <Text><strong>Name:</strong> {guest?.name}</Text>
-                                    <Text><strong>Slack Display Name:</strong> {guest?.slackDisplayName}</Text>
-                                    <Text><strong>Email:</strong> {guest?.email}</Text>
-                                    <Text><strong>Gender:</strong> {guest?.gender}</Text>
-                                    <Text><strong>Age:</strong> {guest?.age}</Text>
-                                    <Text><strong>Height:</strong> {guest?.height} cm</Text>
-                                    <Text><strong>Profession:</strong> {guest?.profession}</Text>
-                                    <Text><strong>Religion:</strong> {guest?.religion}</Text>
-                                    <Text><strong>Employment Status:</strong> {guest?.employmentStatus}</Text>
-                                    <Text><strong>Genotype:</strong> {guest?.genotype}</Text>
-                                    <Text><strong>Have Kids:</strong> {guest?.haveKids ? 'Yes' : 'No'}</Text>
-                                    <Text><strong>Location:</strong> {guest?.location}</Text>
-                                    <Text><strong>Dating Status:</strong> {guest?.datingStatus}</Text>
-                                    <Text><strong>Zodiac Sign:</strong> {guest?.zodiacSign}</Text>
-                                    <Text><strong>Personality:</strong> {guest?.personality}</Text>
-                                    <Text><strong>Description:</strong> {guest?.description}</Text>
-                                    <Text><strong>Do You Mind if the Other Person Has Kids:</strong> {guest?.dontMindKids ? 'Yes, I do mind' : 'No, I don\'t care'}</Text>
+                                <Text><strong>Name:</strong> {guest?.name}</Text>
+                                <Text><strong>Slack Display Name:</strong> {guest?.slackDisplayName}</Text>
+                                <Text><strong>Email:</strong> {guest?.email}</Text>
+                                <Text><strong>Gender:</strong> {guest?.gender}</Text>
+                                <Text><strong>Age:</strong> {guest?.age}</Text>
+                                <Text><strong>Height:</strong> {guest?.height} cm</Text>
+                                <Text><strong>Profession:</strong> {guest?.profession}</Text>
+                                <Text><strong>Religion:</strong> {guest?.religion}</Text>
+                                <Text><strong>Employment Status:</strong> {guest?.employmentStatus}</Text>
+                                <Text><strong>Genotype:</strong> {guest?.genotype}</Text>
+                                <Text><strong>Have Kids:</strong> {guest?.haveKids ? 'Yes' : 'No'}</Text>
+                                <Text><strong>Location:</strong> {guest?.location}</Text>
+                                <Text><strong>Dating Status:</strong> {guest?.datingStatus}</Text>
+                                <Text><strong>Zodiac Sign:</strong> {guest?.zodiacSign}</Text>
+                                <Text><strong>Personality:</strong> {guest?.personality}</Text>
+                                <Text><strong>Description:</strong> {guest?.description}</Text>
+                                <Text><strong>Do You Mind if the Other Person Has Kids:</strong> {guest?.dontMindKids ? 'Yes, I do mind' : 'No, I don\'t care'}</Text>
                             </Collapse>
 
                             <Title order={3} mt="lg">Partner Preferences</Title>
@@ -188,16 +213,29 @@ const GuestDetail = () => {
 
                                     <ScrollArea h={550} p={20}>
                                         {recommendedGuests.length > 0 ? (
-                                            recommendedGuests.map((guest) => {
-                                                const isAlreadyInBlindDate = blindDates.some(date => date.recommendedGuestId === guest.id);
+                                            recommendedGuests
+                                                .map((rec) => {
+                                                    rec.matchPercentage = getMatchPercentage(rec);
+                                                    return rec;
+                                                })
+                                                .sort((a, b) => b.matchPercentage - a.matchPercentage) 
+                                                .map((rec) => {
+                                                    const isAlreadyInBlindDate = blindDates.some(date => date.recommendedGuestId === rec.id);
 
-                                                return (
-                                                    <RecommendedGuestCard key={guest.id} guest={guest} setBlindDate={setBlindDate} isAlreadyInBlindDate={isAlreadyInBlindDate} matchPercentage={matchPercentage} />
-                                                )
-                                            })
+                                                    return (
+                                                        <RecommendedGuestCard
+                                                            key={rec.id}
+                                                            guest={rec}
+                                                            setBlindDate={setBlindDate}
+                                                            isAlreadyInBlindDate={isAlreadyInBlindDate}
+                                                            matchPercentage={rec.matchPercentage} 
+                                                        />
+                                                    );
+                                                })
                                         ) : (
                                             <Empty description={"No recommendations found based on your preferences."} />
                                         )}
+
                                     </ScrollArea>
 
 
