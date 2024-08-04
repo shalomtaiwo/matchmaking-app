@@ -82,20 +82,30 @@ const GuestForm = ({ addGuest }) => {
 
     const handleSubmit = (values) => {
         setLoading(true);
-        addGuest(values)
-        setTimeout(() => {
+        if (values.image) {
+            addGuest(values)
+            setTimeout(() => {
+                notifications.show({
+                    title: 'Success',
+                    message: 'Submission added successfully',
+                    color: 'green',
+                    autoClose: 2000
+                })
+            }, 2000);
+            setTimeout(() => {
+                form.reset();
+                window.location.reload();
+                setLoading(false);
+            }, 3000);
+        }else{
             notifications.show({
-                title: 'Success',
-                message: 'Submission added successfully',
-                color: 'green',
+                title: 'Error',
+                message: 'Please upload an image',
+                color: 'red',
                 autoClose: 2000
             })
-        }, 2000);
-        setTimeout(() => {
-            form.reset();
-            window.location.reload();
             setLoading(false);
-        }, 3000);
+        }
     };
 
     /* eslint-disable-next-line no-unused-vars */
@@ -125,7 +135,7 @@ const GuestForm = ({ addGuest }) => {
                     <Paper my={25}>
 
                         <UploadImage handleSubmitImage={handleSubmitImage} color='blue' multiple={false} variant='light' loading={loading}>
-                                <Image h={160} fit="contain" w="auto" src={form?.values?.image} alt="Profile Picture" radius="lg" fallbackSrc={ImageUpload} />
+                            <Image h={160} fit="contain" w="auto" src={form?.values?.image} alt="Profile Picture" radius="lg" fallbackSrc={ImageUpload} />
                         </UploadImage>
                     </Paper>
                     <Paper my={25}>
@@ -155,13 +165,13 @@ const GuestForm = ({ addGuest }) => {
                     <div>
                         <Select
                             label="Employment Status"
-                            data={['Employed', 'Self-employed', 'Business owner']}
+                            data={['Employed', 'Self-employed', 'Business owner', 'Unemployed', 'Student']}
                             {...form.getInputProps('employmentStatus')}
                             required
                         />
                     </div>
                     <div>
-                        <TextInput label="Profession" {...form.getInputProps('profession')} required />
+                        <TextInput label="Tech Stack" {...form.getInputProps('profession')} required />
                     </div>
                     <div>
                         <TextInput label="Genotype" {...form.getInputProps('genotype')} />

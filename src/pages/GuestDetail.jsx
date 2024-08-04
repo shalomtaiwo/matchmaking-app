@@ -1,4 +1,4 @@
-import { Container, Title, Text, AppShell, ScrollArea, NavLink, Tabs, Button, Divider, ActionIcon, Grid, Collapse, Tooltip, Flex, Center } from '@mantine/core';
+import { Container, Title, Text, AppShell, ScrollArea, NavLink, Tabs, Button, Divider, ActionIcon, Grid, Collapse, Tooltip, Flex, Center, CloseButton } from '@mantine/core';
 import { useParams, Link } from 'react-router-dom';
 import { doc, collection, addDoc, query, where, updateDoc } from 'firebase/firestore';
 import { useDocument, useCollection } from 'react-firebase-hooks/firestore';
@@ -13,7 +13,7 @@ import PropTypes from 'prop-types'
 
 
 
-const GuestDetail = () => {
+const GuestDetail = ({ toggle }) => {
     const { id } = useParams();
     const [guestDoc, loadingGuest, errorGuest] = useDocument(doc(db, 'guests', id));
     const [guestsCollection, loadingGuests, errorGuests] = useCollection(collection(db, 'guests'));
@@ -79,12 +79,10 @@ const GuestDetail = () => {
         g.id !== id
     );
 
-    // calculate match percentage to see how many out of the user's preference the recommnded user ticks
     const getMatchPercentage = (user) => {
         let matchScore = 0;
         let totalWeight = 0;
 
-        // Define weights for each preference
         const weights = {
             gender: 20,
             location: 10,
@@ -95,7 +93,6 @@ const GuestDetail = () => {
             kids: 10,
         };
 
-        // Calculate match score
         if (guest.gender === user.gender) matchScore += weights.gender;
         if (guest.preferredLocation === user.location) matchScore += weights.location;
         if (guest.preferredReligion === user.religion) matchScore += weights.religion;
@@ -104,10 +101,8 @@ const GuestDetail = () => {
         if (guest.preference.split(' ').some(pref => user.description?.toLowerCase().includes(pref.toLowerCase()))) matchScore += weights.description;
         if (!guest.dontMindKids && user.haveKids === guest.haveKids) matchScore += weights.kids;
 
-        // Calculate total weight
         totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
 
-        // Calculate and return match percentage
         return (matchScore / totalWeight) * 100;
     };
 
@@ -122,6 +117,7 @@ const GuestDetail = () => {
         <>
             <AppShell.Aside p="md">
                 <ScrollArea h={'auto'}>
+                    <CloseButton onClick={() => toggle()} hiddenFrom='sm' />
                     {guests.map(g => (
                         <NavLink
                             key={g.id}
@@ -130,6 +126,7 @@ const GuestDetail = () => {
                             label={g.name}
                             active={g.id === id}
                             variant="filled"
+                            onClick={() => toggle()}
                             style={{ marginBottom: '8px' }}
                         />
                     ))}
@@ -218,7 +215,7 @@ const GuestDetail = () => {
                                                     rec.matchPercentage = getMatchPercentage(rec);
                                                     return rec;
                                                 })
-                                                .sort((a, b) => b.matchPercentage - a.matchPercentage) 
+                                                .sort((a, b) => b.matchPercentage - a.matchPercentage)
                                                 .map((rec) => {
                                                     const isAlreadyInBlindDate = blindDates.some(date => date.recommendedGuestId === rec.id);
 
@@ -228,7 +225,7 @@ const GuestDetail = () => {
                                                             guest={rec}
                                                             setBlindDate={setBlindDate}
                                                             isAlreadyInBlindDate={isAlreadyInBlindDate}
-                                                            matchPercentage={rec.matchPercentage} 
+                                                            matchPercentage={rec.matchPercentage}
                                                         />
                                                     );
                                                 })
@@ -366,7 +363,7 @@ const GuestDetail = () => {
 };
 
 GuestDetail.propTypes = {
-    addGuest: PropTypes.func
+    toggle: PropTypes.func
 }
 
 export default GuestDetail;
