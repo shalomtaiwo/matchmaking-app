@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types'
 
 const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate, matchPercentage }) => {
+
     return (
 
         <Card shadow="sm" padding="lg" radius="md" mt={10} withBorder style={{ textAlign: 'center' }}>
@@ -28,17 +29,27 @@ const RecommendedGuestCard = ({ guest, setBlindDate, isAlreadyInBlindDate, match
                         View Profile
                     </Button>
 
-                    <Button
-                        variant="light"
-                        onClick={() => setBlindDate(guest.id)}
-                        disabled={isAlreadyInBlindDate}
-                        ml="sm"
-                    >
-                        {isAlreadyInBlindDate ? 'Already in Blind Date List' : 'Set Blind Date'}
-                    </Button>
+                    {guest.status === 'pending' ? (
+                        <Button variant="light" disabled ml="sm">
+                            User in a date with another user
+                        </Button>
+                    ) : guest.status === 'successful' ? (
+                        <Button variant="light" disabled ml="sm">
+                            This user has been matched
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="light"
+                            onClick={() => setBlindDate(guest.id)}
+                            disabled={isAlreadyInBlindDate}
+                            ml="sm"
+                        >
+                            {isAlreadyInBlindDate ? 'Already in Blind Date List' : 'Set Blind Date'}
+                        </Button>
+                    )}
                 </Group>
             </Center>
-            <Progress value={matchPercentage} mt="md" color={matchPercentage > 50 ? 'green' : matchPercentage > 25 ? 'yellow' :  'red'} />
+            <Progress value={matchPercentage} mt="md" color={matchPercentage > 50 ? 'green' : matchPercentage > 25 ? 'yellow' : 'red'} />
         </Card>
     );
 };

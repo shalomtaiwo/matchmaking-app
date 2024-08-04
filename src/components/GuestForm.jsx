@@ -75,6 +75,8 @@ const GuestForm = ({ addGuest }) => {
             slackDisplayName: '',
             email: '',
             image: '',
+            minimumPreferredAgeRange: 0,
+            maximumPreferredAgeRange: 0
         },
     });
 
@@ -240,6 +242,29 @@ const GuestForm = ({ addGuest }) => {
                             label="Preferred Dating Status"
                             data={['Currently in a relationship', 'Somebody is in a relationship with me', 'None of the above']}
                             {...form.getInputProps('preferredDatingStatus')}
+                        />
+                    </div>
+                    <div>
+                        <NumberInput
+                            label="Minimum Age Range"
+                            description="Please add maximum age first"
+                            min={16}
+                            max={form.values.maximumPreferredAgeRange}
+                            step={1}
+                            required
+                            {...form.getInputProps('minimumPreferredAgeRange')}
+                        />
+                    </div>
+
+                    <div>
+                        <NumberInput
+                            label="Maximum Age Range"
+                            description="Minimum age must be less than maximum age"
+                            min={form.values.minimumPreferredAgeRange}
+                            max={100}
+                            step={1}
+                            required
+                            {...form.getInputProps('maximumPreferredAgeRange')}
                         />
                     </div>
 

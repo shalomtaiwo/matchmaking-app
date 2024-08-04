@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Route, Routes, Link, Navigate } from 'react-router-dom';
 import { AppShell, Container, Flex, NavLink, Button, LoadingOverlay, Burger } from '@mantine/core';
-import { collection } from 'firebase/firestore';
+import { collection, orderBy } from 'firebase/firestore';
 import { useCollection } from 'react-firebase-hooks/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { db, auth } from './firebaseConfig';
@@ -12,7 +12,9 @@ import { signOut } from 'firebase/auth';
 import { useDisclosure } from '@mantine/hooks';
 
 const App = () => {
-  const [value, loading, error] = useCollection(collection(db, 'guests'));
+  const [value, loading, error] = useCollection(collection(db, 'guests'),orderBy('matched', 'desc'), {
+    snapshotListenOptions: { includeMetadataChanges: true },
+  });
   const [user] = useAuthState(auth);
   const [opened, { toggle }] = useDisclosure();
 
@@ -35,7 +37,7 @@ const App = () => {
         layout='default'
       >
         <AppShell.Header>
-          <Flex justify={'center'} direction={'row'} align={'center'} p={'lg'} gap={'lg'}>
+          <Flex justify={'left'} direction={'row'} align={'center'} p={'lg'} gap={'lg'}>
             <NavLink component={Link} to="/" label="Home" w={'auto'}/>
             <NavLink component={Link} to="/submissions" label="Submissions" w={'auto'}/>
             {user ? (

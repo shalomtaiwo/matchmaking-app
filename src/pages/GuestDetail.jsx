@@ -1,14 +1,15 @@
-import { Container, Title, Text, AppShell, ScrollArea, NavLink, Tabs, Button, Divider, ActionIcon, Grid, Collapse, Tooltip, Flex, Center, CloseButton } from '@mantine/core';
+import { Container, Title, Text, AppShell, ScrollArea, NavLink, Tabs, Button, Divider, ActionIcon, Grid, Collapse, Tooltip, Flex, Center, CloseButton, Paper, ThemeIcon } from '@mantine/core';
 import { useParams, Link } from 'react-router-dom';
-import { doc, collection, addDoc, query, where, updateDoc } from 'firebase/firestore';
+import { doc, collection, addDoc, query, where, updateDoc, orderBy, getDoc, deleteDoc } from 'firebase/firestore';
 import { useDocument, useCollection } from 'react-firebase-hooks/firestore';
 import { db } from '../firebaseConfig';
 import { LoadingOverlay } from '@mantine/core';
-import { IconX, IconCheck, IconRestore } from '@tabler/icons-react';
+import { IconX, IconCheck, IconRestore, IconHeartHandshake } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { Empty, Image } from 'antd';
 import RecommendedGuestCard from '../components/RecommendedGuestCard';
 import PropTypes from 'prop-types'
+import { notifications } from '@mantine/notifications';
 // import { ImageBox } from 'mantine-addons';
 
 
@@ -16,7 +17,7 @@ import PropTypes from 'prop-types'
 const GuestDetail = ({ toggle }) => {
     const { id } = useParams();
     const [guestDoc, loadingGuest, errorGuest] = useDocument(doc(db, 'guests', id));
-    const [guestsCollection, loadingGuests, errorGuests] = useCollection(collection(db, 'guests'));
+    const [guestsCollection, loadingGuests, errorGuests] = useCollection(collection(db, 'guests'), orderBy('matched', 'desc'));
 
     const [opened, { toggle: toggleOpened }] = useDisclosure(false);
     const [opened2, { toggle: toggleOpened2 }] = useDisclosure(false);
@@ -31,14 +32,68 @@ const GuestDetail = ({ toggle }) => {
     const guests = guestsCollection?.docs.map(doc => ({ ...doc.data(), id: doc.id }));
     const blindDates = blindDatesSnapshot?.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 
-    const handleStatusChange = async (dateId, status) => {
+    const handleStatusChange = async (dateId, status, chosenUserId) => {
         try {
             const dateDocRef = doc(db, 'blind_dates', dateId);
-            await updateDoc(dateDocRef, { status });
-            alert(`Blind date marked as ${status}!`);
+            const userInfo = doc(db, 'guests', id);
+            const chosenUser = doc(db, 'guests', chosenUserId);
+            const successfulUser = doc(db, 'guests', chosenUserId);
+            const successfullUserDoc = getDoc(successfulUser);
+            const successfullUserData = await successfullUserDoc;
+            await updateDoc(dateDocRef, { status }).then(async () => {
+                if (status === 'successful') {
+
+                    await addDoc(collection(db, 'successful'), {
+                        userOne: successfullUserData.data(),
+                        userTwo: guest
+                    }).then(async (res) => {
+                        await updateDoc(userInfo, { matched: true, status, successId: res.id, matchedUser: successfullUserData.data(), matchedUserId: chosenUserId }).then(async () => {
+                            await updateDoc(chosenUser, { matched: true, status, successId: res.id, matchedUser: guest, matchedUserId: id }).then(() => {
+                                notifications.show(
+                                    { title: 'Success', message: `Blind date marked as ${status}!`, color: 'green' }
+                                )
+                            })
+                        })
+
+                    })
+                } else if (status === 'pending' || status === 'unsuccessful') {
+                    if (guest.successId) {
+                        deleteDoc(doc(db, 'successful', guest.successId)).then(async () => {
+                            await updateDoc(userInfo, { matched: false, status, successId: '', matchedUser: '', matchedUserId: '' }).then(async () => {
+                                await updateDoc(chosenUser, { matched: false, status, successId: '', matchedUser: '', matchedUserId: '' }).then(() => {
+                                    notifications.show(
+                                        { title: 'Success', message: `Blind date marked as ${status}!`, color: 'blue' }
+                                    )
+                                }).catch((error) => {
+                                    console.error(`Error updating blind date status: `, error);
+                                })
+                            }).catch((error) => {
+                                console.error(`Error updating blind date status: `, error);
+                            })
+                        }).catch((error) => {
+                            console.error(`Error updating blind date status: `, error);
+                        })
+                    } else {
+                        await updateDoc(userInfo, { matched: false, status, successId: '', matchedUser: '', matchedUserId: '' }).then(async () => {
+                            await updateDoc(chosenUser, { matched: false, status, successId: '', matchedUser: '', matchedUserId: '' }).then(() => {
+                                notifications.show(
+                                    { title: 'Success', message: `Blind date marked as ${status}!`, color: 'blue' }
+                                )
+                            }).catch((error) => {
+                                console.error(`Error updating blind date status: `, error);
+                            })
+                        }).catch((error) => {
+                            console.error(`Error updating blind date status: `, error);
+                        })
+                    }
+                }
+
+            })
         } catch (error) {
             console.error(`Error updating blind date status: `, error);
-            alert(`Failed to update blind date status.`);
+            notifications.show(
+                { title: 'Error', message: `Error updating blind date status: ${error.message}`, color: 'red' }
+            )
         }
     };
 
@@ -65,6 +120,7 @@ const GuestDetail = ({ toggle }) => {
 
     const recommendedGuests = guests.filter(g =>
         g.gender === guest?.interestedIn &&
+        (!guest.match || guest.match === false) &&
         g.gender !== guest?.gender &&
         (
             (guest.preferredLocation ? g.location === guest.preferredLocation : true) ||
@@ -91,6 +147,7 @@ const GuestDetail = ({ toggle }) => {
             personality: 20,
             description: 20,
             kids: 10,
+            age: 10,
         };
 
         if (guest.gender === user.gender) matchScore += weights.gender;
@@ -98,6 +155,7 @@ const GuestDetail = ({ toggle }) => {
         if (guest.preferredReligion === user.religion) matchScore += weights.religion;
         if (guest.preferredZodiacSign === user.zodiacSign) matchScore += weights.zodiacSign;
         if (guest.preferredPersonality === user.personality) matchScore += weights.personality;
+        if ((guest.age >= user.minimumPreferredAgeRange && guest.age <= user.maximumPreferredAgeRange) || guest.age >= user.age - 3 || guest.age <= user.age + 3) matchScore += weights.age;
         if (guest.preference.split(' ').some(pref => user.description?.toLowerCase().includes(pref.toLowerCase()))) matchScore += weights.description;
         if (!guest.dontMindKids && user.haveKids === guest.haveKids) matchScore += weights.kids;
 
@@ -105,7 +163,6 @@ const GuestDetail = ({ toggle }) => {
 
         return (matchScore / totalWeight) * 100;
     };
-
 
 
     if (!guest) return <Center mt={70}>
@@ -118,14 +175,22 @@ const GuestDetail = ({ toggle }) => {
             <AppShell.Aside p="md">
                 <ScrollArea h={'auto'}>
                     <CloseButton onClick={() => toggle()} hiddenFrom='sm' />
-                    {guests.map(g => (
+                    {guests.map((g, i) => (
                         <NavLink
                             key={g.id}
                             component={Link}
                             to={`/submissions/${g.id}`}
-                            label={g.name}
+                            label={<Flex align={'center'} gap={10}>
+                                <Text>
+                                    {i + 1}.
+                                </Text>
+                                <Text>
+                                    {g.name}
+                                </Text>
+                            </Flex>}
                             active={g.id === id}
                             variant="filled"
+                            bg={(g.matched && g.id !== id) ? 'rgb(108, 192, 60, 0.7' : ''}
                             onClick={() => toggle()}
                             style={{ marginBottom: '8px' }}
                         />
@@ -144,18 +209,43 @@ const GuestDetail = ({ toggle }) => {
                         </Tabs.List>
 
                         <Tabs.Panel value="details">
-                            <Flex align={'center'} justify={'center'} direction={'column'} mt={20}>
+                            <Flex align={'center'} justify={'center'} direction={'row'} mt={20}>
+                                {/* {console.log(guest.matchedUser)} */}
 
                                 {/* <ImageBox src={guest.image} alt="Placeholder image" /> */}
+                                <Container>
+                                    <Image
+                                        width={80}
+                                        height={80}
+                                        src={guest.image ? guest.image : "error"}
+                                        fallback="data:image/png;base64,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"
+                                    />
+                                    <Title order={5}>{guest?.name}</Title>
+                                </Container>
 
-                                <Image
-                                    width={100}
-                                    height={100}
-                                    src={guest.image ? guest.image : "error"}
-                                    fallback="data:image/png;base64,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"
-                                />
-                                <Title order={2}>{guest?.name}</Title>
+                                <Container>
+                                    <ThemeIcon color="red" variant="light">
+                                        <IconHeartHandshake />
+                                    </ThemeIcon>
+                                </Container>
+
+                                <Container>
+                                    <Image
+                                        width={80}
+                                        height={80}
+                                        src={guest?.matchedUser?.image}
+                                        fallback="data:image/png;base64,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"
+                                    />
+                                    <Title order={5}>{guest?.matchedUser?.name}</Title>
+                                </Container>
+
                             </Flex>
+                            {
+                                guest?.status === 'successful' && <Paper bg={'#e9f3ff'} style={{ textAlign: 'center' }} mt={'lg'}>
+                                    <NavLink component={Link} color='blue' to={`/submissions/${guest?.matchedUserId}`} w={'auto'} label="View matched profile" />
+                                </Paper>
+                            }
+
                             <Divider my="sm" />
                             <Button onClick={toggleOpened}>User Details</Button>
 
@@ -193,6 +283,7 @@ const GuestDetail = ({ toggle }) => {
                                 <Text><strong>Preferred Dating Status:</strong> {guest?.preferredDatingStatus}</Text>
                                 <Text><strong>Do You Mind if the Other Person Has Kids:</strong> {guest?.dontMindKids ? 'Yes, I do mind' : 'No, I don\'t care'}</Text>
                                 <Text><strong>Partner Preferences:</strong> {guest?.preference}</Text>
+                                <Text><strong>Preferred Age Range:</strong><br /> min: <strong>{guest?.minimumPreferredAgeRange}</strong> max: <strong>{guest?.maximumPreferredAgeRange}</strong> </Text>
                             </Collapse>
                         </Tabs.Panel>
                         <Tabs.Panel value="recommends">
@@ -218,6 +309,8 @@ const GuestDetail = ({ toggle }) => {
                                                 .sort((a, b) => b.matchPercentage - a.matchPercentage)
                                                 .map((rec) => {
                                                     const isAlreadyInBlindDate = blindDates.some(date => date.recommendedGuestId === rec.id);
+                                                    // const isAlreadyInADateWithAnotherGuest = rec.some(date => date.status === 'pending');
+                                                    // console.log(rec)
 
                                                     return (
                                                         <RecommendedGuestCard
@@ -226,6 +319,7 @@ const GuestDetail = ({ toggle }) => {
                                                             setBlindDate={setBlindDate}
                                                             isAlreadyInBlindDate={isAlreadyInBlindDate}
                                                             matchPercentage={rec.matchPercentage}
+                                                        // isAlreadyInADateWithAnotherGuest={isAlreadyInADateWithAnotherGuest}
                                                         />
                                                     );
                                                 })
@@ -253,14 +347,14 @@ const GuestDetail = ({ toggle }) => {
                                                         </Grid.Col>
                                                         <Grid.Col span={1}>
                                                             <Tooltip label="Successful Blind Date">
-                                                                <ActionIcon color="green" onClick={() => handleStatusChange(date.id, 'successful')}>
+                                                                <ActionIcon color="green" onClick={() => handleStatusChange(date.id, 'successful', date.recommendedGuestId)}>
                                                                     <IconCheck size={16} />
                                                                 </ActionIcon>
                                                             </Tooltip>
                                                         </Grid.Col>
                                                         <Grid.Col span={1}>
                                                             <Tooltip label="Unsuccessful Blind Date">
-                                                                <ActionIcon color="red" variant='light' onClick={() => handleStatusChange(date.id, 'unsuccessful')}>
+                                                                <ActionIcon color="red" variant='light' onClick={() => handleStatusChange(date.id, 'unsuccessful', date.recommendedGuestId)}>
                                                                     <IconX size={16} />
                                                                 </ActionIcon>
                                                             </Tooltip>
@@ -291,14 +385,14 @@ const GuestDetail = ({ toggle }) => {
                                                         </Grid.Col>
                                                         <Grid.Col span={1}>
                                                             <Tooltip label="Undo Successful Blind Date">
-                                                                <ActionIcon color="green" onClick={() => handleStatusChange(date.id, 'pending')}>
+                                                                <ActionIcon color="green" onClick={() => handleStatusChange(date.id, 'pending', date.recommendedGuestId)}>
                                                                     <IconRestore size={16} />
                                                                 </ActionIcon>
                                                             </Tooltip>
                                                         </Grid.Col>
                                                         <Grid.Col span={1}>
                                                             <Tooltip label="Unsuccessful Blind Date">
-                                                                <ActionIcon color="red" variant='light' onClick={() => handleStatusChange(date.id, 'unsuccessful')}>
+                                                                <ActionIcon color="red" variant='light' onClick={() => handleStatusChange(date.id, 'unsuccessful', date.recommendedGuestId)}>
                                                                     <IconX size={16} />
                                                                 </ActionIcon>
                                                             </Tooltip>
@@ -329,14 +423,14 @@ const GuestDetail = ({ toggle }) => {
                                                         </Grid.Col>
                                                         <Grid.Col span={1}>
                                                             <Tooltip label="Undo Successful Blind Date">
-                                                                <ActionIcon color="green" onClick={() => handleStatusChange(date.id, 'pending')}>
+                                                                <ActionIcon color="green" onClick={() => handleStatusChange(date.id, 'pending', date.recommendedGuestId)}>
                                                                     <IconRestore size={16} />
                                                                 </ActionIcon>
                                                             </Tooltip>
                                                         </Grid.Col>
                                                         <Grid.Col span={1}>
                                                             <Tooltip label="Successful Blind Date.">
-                                                                <ActionIcon color="green" variant='light' onClick={() => handleStatusChange(date.id, 'successful')}>
+                                                                <ActionIcon color="green" variant='light' onClick={() => handleStatusChange(date.id, 'successful', date.recommendedGuestId)}>
                                                                     <IconCheck size={16} />
                                                                 </ActionIcon>
                                                             </Tooltip>

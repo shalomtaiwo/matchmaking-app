@@ -1,4 +1,4 @@
-import { Table, Container, Title, LoadingOverlay, Button, Flex, Text, Center } from '@mantine/core';
+import { Table, Container, Title, LoadingOverlay, Button, Flex, Text, Center, Divider } from '@mantine/core';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
@@ -40,7 +40,8 @@ const Submissions = ({ guests, loading, error }) => {
 
     return (
         <Container mt={40}>
-            <Title order={2}>Guest Submissions</Title>
+            <Title order={2} py={20}>Guest Submissions</Title>
+            <Divider mb={20} />
             {
                 guests.length > 0 ? (
                     <Table highlightOnHover horizontalSpacing="md" verticalSpacing="md" >
@@ -81,13 +82,18 @@ const Submissions = ({ guests, loading, error }) => {
                                         <Flex justify={'flex-start'} align={'center'} gap={'xs'}>
                                             <Button onClick={() => handleView(guest.id)}>View</Button>
                                             <Button color="red" onClick={() => handleDelete(guest.id)}>Delete</Button>
+                                            {guest.matched ? <Text c="green" size='sm'>Matched</Text> : <>
+                                            {
+                                                guest?.status === 'pending' ? <Text c="blue" size='sm'>Ongoing date</Text> : <Text c="red" size='sm'>Not Matched</Text>
+                                            }
+                                            </>}
                                         </Flex>
                                     </Table.Td>
                                 </Table.Tr>
                             ))}
                         </Table.Tbody>
                         <Table.Caption>
-                        <Pagination current={activePage} pageSize={guestPerPage} onChange={onChange} total={guests.length} />
+                        <Pagination current={activePage} pageSize={guestPerPage} showSizeChanger={false} onChange={onChange} total={guests.length} />
 
                         </Table.Caption>
                     </Table>
